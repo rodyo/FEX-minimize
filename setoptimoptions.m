@@ -123,7 +123,7 @@
 % E-mail     : oldenhuis@gmail.com    (personal)
 %              oldenhuis@luxspace.lu  (professional)
 % Affiliation: LuxSpace s�rl
-% Licence    : GPL + anything implied by placing it on the FEX
+% Licence    : BSD
 
 
 % Changelog
