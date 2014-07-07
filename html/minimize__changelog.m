@@ -1,5 +1,13 @@
 %% Changelog for MINIMIZE()
 
+%% *v8* (Jul 07, 2014)
+% * *FIXED*: loop range issue in setoptimoptions
+% * *FIXED*: simple linear constraint in one of examples was incorrectly 
+%   transposed
+%
+% Thanks to pag (<a https://github.com/pag>) for reporting these issues.
+%
+
 %% *v7* (Mar 13, 2014)
 %
 % * *NEW*: massive documentation update
@@ -50,27 +58,27 @@
 %  
 %% *v4* (Oct 12, 2009, unpublished)
 %
-% * Now, |optimize()| also supports |fminlbfgs()|, a limited-memory, 
+% * *NEW*: |optimize()| now also supports |fminlbfgs()|, a limited-memory, 
 %   BFGS quasi-newton optimizer, also available on the file exchange. 
 %   This is a major change, because it requires more options and, more 
 %   importantly, derivatives for the penalized constraint functions.
-% * Penalties are now scaled with the objective function value
-% * *FIXED*: lots of small bugs:
-%   ** text formatting in |output.message| was all messed up for 
-%      constrained problems
-%   ** |ConstrFuncCount| wasn't updated; it always resulted in |optimize()| 
-%      reporting only 2 evaluations of the constraint function
-%   ** constrained global searches had a lot of problems with finalizing 
-%      their solutions; these were mostly related to the proper 
-%      formatting of |output|.
+% * *CHANGED*: penalties are now scaled with the objective function value
+% * *FIXED*: text formatting in |output.message| was all messed up for 
+%   constrained problems
+% * *FIXED*: |ConstrFuncCount| wasn't updated; it always resulted in 
+%   |optimize()| reporting only 2 evaluations of the constraint function
+% * *FIXED*: constrained global searches had a lot of problems with finalizing 
+%   their solutions; these were mostly related to the proper formatting of 
+%   |output|.
 % * *FIXED*: another small bug; |lb| and |ub| were swapped during 
 %   initialization, resulting in an error when |lb| was given but |ub| 
 %   was omitted. 
 % * *CHANGED*: the default algorithm back to |fminsearch|. This is of course 
 %   the least buggy, and most well-known to everyone.
-% * Corrected small mistake in the penalty function for linear equality 
-%   constraints; an |abs()| was omitted, so that the sum of the constraint 
-%   violation could result in lower penalties than actually deserved.
+% * *FIXED*: corrected small mistake in the penalty function for linear 
+%   equality constraints; an |abs()| was omitted, so that the sum of the 
+%   constraint violation could result in lower penalties than actually 
+%   deserved.
 %
 % 
 %% *v3* (Aug 6, 2009)

@@ -128,6 +128,10 @@
 
 % Changelog
 %{
+2014/July/07 (Rody Oldenhuis)
+- FIXED: loop range for toolbox options was set to the wrong options list.
+         Problem reported by pag (https://github.com/pag). Thanks!
+
 2014/March/13 (Rody Oldenhuis)
 - Finally did the docs!
 
@@ -227,7 +231,7 @@ function options = setoptimoptions(varargin)
     for ii = 1:size(customOptions,1)
         options.(customOptions{ii,1}) = customOptions{ii,2}; end
     if ~haveOptimToolbox
-        for ii = 1:size(customOptions,1)
+        for ii = 1:size(toolboxOptions,1)
             options.(toolboxOptions{ii,1}) = toolboxOptions{ii,2}; end
     end
     

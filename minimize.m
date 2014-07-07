@@ -103,7 +103,7 @@
 %
 %
 % >> % simple linear inequality: x(1) + x(2) <= 1
-% >> minimize(rosen,[0 0], [1 1], 1)
+% >> minimize(rosen,[0; 0], [1 1], 1)
 % 
 % ans =
 %    0.6187    0.3813
@@ -139,6 +139,7 @@
 % See also: SETOPTIMOPTIONS, FMINSEARCH, FMINLBFGS.
 
 
+
 % Please report bugs and inquiries to: 
 %
 % Name       : Rody P.S. Oldenhuis
@@ -146,6 +147,7 @@
 %              oldenhuis@luxspace.lu  (professional)
 % Affiliation: LuxSpace sàrl
 % Licence    : BSD
+
 
 
 % FMINSEARCHBND, FMINSEARCHCON and part of the documentation 
