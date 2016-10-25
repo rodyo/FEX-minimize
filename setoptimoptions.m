@@ -242,7 +242,7 @@ function options = setoptimoptions(varargin)
         
         % Custom options
         for ii = 1:numel(customOptions(:,1))
-            if ~any(strcmpi(parameters, customOptions{ii,1})) && ~isempty(oldOptions.(customOptions{ii,1}))
+            if ~any(strcmpi(parameters, customOptions{ii,1})) && isfield(oldOptions, customOptions{ii,1}) && ~isempty(oldOptions.(customOptions{ii,1}))
                 options.(customOptions{ii,1}) = oldOptions.(customOptions{ii,1}); 
                 fOld(strcmpi(fOld,customOptions{ii,1})) = [];
             end
@@ -251,7 +251,7 @@ function options = setoptimoptions(varargin)
         % Toolbox options
         if ~haveOptimToolbox
             for ii = 1:numel(toolboxOptions(:,1))
-                if ~any(strcmpi(parameters, toolboxOptions{ii,1})) && ~isempty(oldOptions.(toolboxOptions{ii,1}))
+                if ~any(strcmpi(parameters, toolboxOptions{ii,1})) && isfield(oldOptions, toolboxOptions{ii,1}) && ~isempty(oldOptions.(toolboxOptions{ii,1}))
                     options.(toolboxOptions{ii,1}) = oldOptions.(toolboxOptions{ii,1}); 
                     fOld(strcmpi(fOld,toolboxOptions{ii,1})) = [];
                 end
@@ -261,7 +261,7 @@ function options = setoptimoptions(varargin)
         % All other options
         if ~isempty(fOld)
             for ii = 1:numel(fOld)                
-                if ~any(strcmpi(parameters, fOld{ii})) && ~isempty(oldOptions.(fOld{ii}))
+                if ~any(strcmpi(parameters, fOld{ii})) && isfield(oldOptions, fOld{ii}) && ~isempty(oldOptions.(fOld{ii}))
                     options.(fOld{ii}) = oldOptions.(fOld{ii}); end
             end
         end
