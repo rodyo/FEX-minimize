@@ -499,31 +499,9 @@ function [sol, fval, exitflag, output, grad] = ...
         % evaluate the non-linear constraint function on 
         % the initial value, to perform initial checks
 % FIXME: fevals not counted
-% FIXME: this can be done shorter; see that other place where this is done
-        grad_c = [];   grad_ceq = [];
-        if have_nonlconFcn
-            if nonlconFcn_in_objFcn
-                if grad_nonlcon_from_nonlconFcn
-                    if grad_obj_from_objFcn
-                        [~,~, c, ceq, grad_c, grad_ceq] = objFcn(x0);
-                    else
-                        [~, c, ceq, grad_c, grad_ceq] = objFcn(x0);
-                    end
-                else
-                    if grad_obj_from_objFcn
-                        [~,~, c, ceq] = objFcn(x0);
-                    else
-                        [~, c, ceq] = objFcn(x0);
-                    end
-                end
-            else
-                if grad_nonlcon_from_nonlconFcn
-                    [c, ceq, grad_c, grad_ceq] = conFcn(x0);
-                else
-                    [c, ceq] = conFcn(x0);
-                end
-            end
-        end
+        grad_c   = [];  
+        grad_ceq = [];
+        [c, ceq] = conFcn(x0);
 
         % Check sizes of derivatives
         if ~isempty(grad_c) && (size(grad_c,2) ~= numel(x0)) && (size(grad_c,1) ~= numel(x0))
@@ -667,13 +645,45 @@ function [sol, fval, exitflag, output, grad] = ...
     
     % Evaluate objective function
     function varargout = objFcn(x)
-        [varargout{1:nargout}] = feval(funfcn , reshape(x,size(new_x)), varargin{:});        
+        [varargout{1:nargout}] = feval(funfcn,...
+                                       reshape(x,size(new_x)),...
+                                       varargin{:});        
     end
     
     
     % Evaluate non-linear constraint function
-    function varargout = conFcn(x)
-        [varargout{1:nargout}] = feval(nonlcon , reshape(x,size(new_x)), varargin{:});        
+    function [c,ceq, grad_c,grad_ceq] = conFcn(x)
+        
+        c        = [];
+        ceq      = [];
+        grad_c   = [];   
+        grad_ceq = [];
+        
+        x = reshape(x,size(new_x));
+        
+        if have_nonlconFcn
+            if nonlconFcn_in_objFcn
+                if grad_nonlcon_from_nonlconFcn
+                    if grad_obj_from_objFcn
+                        [~,~, c, ceq, grad_c, grad_ceq] = objFcn(x);
+                    else
+                        [~, c, ceq, grad_c, grad_ceq] = objFcn(x);
+                    end
+                else
+                    if grad_obj_from_objFcn
+                        [~,~, c, ceq] = objFcn(x);
+                    else
+                        [~, c, ceq] = objFcn(x);
+                    end
+                end
+            else
+                if grad_nonlcon_from_nonlconFcn
+                    [c, ceq, grad_c, grad_ceq] = feval(nonlcon, x, varargin{:});        
+                else
+                    [c, ceq] = feval(nonlcon, x, varargin{:});        
+                end
+            end
+        end        
     end
     
     
@@ -876,6 +886,19 @@ function [sol, fval, exitflag, output, grad] = ...
             % Penalize the non-linear constraint violations
             % required: ceq = 0 and c <= 0
             if have_nonlconFcn 
+                
+                [c, ceq, grad_c, grad_ceq] = conFcn(x_new);
+                
+                % Central-difference derivatives are computed later;
+                % the strictness setting might make computing it here
+                % unneccecary
+                
+                % Initialize as characters, to distinguish them later on;
+                % derivatives may be empty, inf, or NaN as returned from [nonlcon]
+                if isempty(grad_c)  , grad_c   = ''; end
+                if isempty(grad_ceq), grad_ceq = ''; end
+                
+                %{
                 if ~nonlconFcn_in_objFcn
                     
                     % Initialize as characters, to distinguish them later on;
@@ -902,6 +925,10 @@ function [sol, fval, exitflag, output, grad] = ...
                 else
                     % TODO
                 end
+                %}
+                if create_output
+                	output.ConstrfuncCount = output.ConstrfuncCount + 1; end
+                
             end
             
             % Force grad_c] and [grad_ceq] to be of proper size

@@ -1,5 +1,10 @@
 %% Changelog for MINIMIZE()
 
+%% *v9* (2016/October/25)
+% * *FIXED*: Constraints in objective function were not taken into account
+%   in the finalize() nested function 
+%
+
 %% *v8* (Jul 07, 2014)
 % * *FIXED*: loop range issue in setoptimoptions
 % * *FIXED*: simple linear constraint in one of examples was incorrectly 

@@ -8,10 +8,10 @@ function minimize_demo
     clc, rosen = @(x) ( (1-x(1))^2 + 105*(x(2)-x(1)^2)^2 ) /1e4;
 
     %%
-    % This is the classical Rosenbr\"uck function, which has a global minimum
+    % This is the classical Rosenbrock function, which has a global minimum
     % at $f(x) = f([1, 1]) = 0$. The function is relatively hard to minimize,
     % because that minimum is located in a long narrow ``valley'':
-    k = 0; range = -5:0.05:5;
+    k = 0; range = -5:0.1:5;
     z = zeros(numel(range));    
     for ii = range
         m = 0; k = k + 1;        
@@ -21,18 +21,24 @@ function minimize_demo
         end
     end  
     [y, x] = meshgrid(range, range);
-    S = surf(x, y, z, 'linestyle', 'none'); view(-213, 38), axis tight    
-        
     
-    shading interp, material metal, lighting gouraud, colormap('hot')
+    S = surf(x, y, z, 'linestyle', 'none');
+    view(-213, 38)
+    axis tight    
+            
+    shading interp
+    material metal
+    lighting gouraud
+    colormap('hot')
+    
     light('style', 'local', 'position', [-3 0 5]);
-    set(S, 'ambientstrength', 0.8)        
-    
+    set(S, 'ambientstrength', 0.8)     
+        
     %%
     % Optimizing the fully unconstrained problem with |minimize| indeed 
     % finds the global minimum:
     solution = minimize(rosen, [3 3])    
-    
+        
     
     %% Optimization with bound constraints
     %
@@ -41,41 +47,71 @@ function minimize_demo
     
     %%
     % in the figure, this looks like
-    zz = z;   zz(x > 2 & y > 2) = inf;  
-    ZZ = z;   ZZ(x < 2 & y < 2) = inf;
+    zz = z;   zz(x > 2 & y > 2) = NaN;  
+    ZZ = z;   ZZ(x < 2 & y < 2) = NaN;
     
-    figure, hold on
-    S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
-    S(2) = surf(x, y, ZZ, 'linestyle', 'none');
-    plot3(solution(1), solution(2), fval+0.5, 'gx', ...
-        'MarkerSize', 20,...
-        'linewidth', 5)    
+    figure('renderer', 'opengl');
+    hold on
+    
+    S(1) = surf(x, y, zz,... 
+                'linestyle', 'none',...
+                'FaceAlpha', 0.2);
+            
+    S(2) = surf(x, y, ZZ,...
+                'linestyle', 'none');
+    
+    plot3(solution(1), solution(2), fval+0.5, ...
+          'gx', ...
+          'MarkerSize', 20,...
+          'linewidth' , 5)    
 
-    xlabel('X(1)'), ylabel('X(2)')    
-    view(-196, 38), grid on, axis tight      
+    xlabel('X(1)')
+    ylabel('X(2)')  
     
-    shading interp, material metal, lighting gouraud, colormap('hot')
+    view(-196, 38)
+    grid on
+    axis tight      
+    
+    shading interp
+    material metal
+    lighting gouraud
+    colormap('hot')
+    
     light('style', 'local', 'position', [-3 0 5]);
     set(S, 'ambientstrength', 0.8); 
-    
+        
     %%
     % Similarly, imposing an upper bound yields
     solution = minimize(rosen, [3 3], [],[], [],[], [],[0.5 0.5])
     
-    zz = z;   zz(x < 0.5 & y < 0.5) = inf;  
-    ZZ = z;   ZZ(x > 0.5 & y > 0.5) = inf;
+    zz = z;   zz(x < 0.5 & y < 0.5) = NaN;  
+    ZZ = z;   ZZ(x > 0.5 & y > 0.5) = NaN;
     
-    figure, hold on
-    S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
-    S(2) = surf(x, y, ZZ, 'linestyle', 'none');   
+    figure('renderer', 'opengl');
+    hold on
+    
+    S(1) = surf(x, y, zz, ...
+                'linestyle', 'none',...
+                'FaceAlpha', 0.2);
+            
+    S(2) = surf(x, y, ZZ, ...
+                'linestyle', 'none'); 
+    
     plot3(solution(1), solution(2), fval+0.5, 'gx', ...
-        'MarkerSize', 20,...
-        'LineWidth', 5);        
+          'MarkerSize', 20,...
+          'LineWidth', 5);        
     
-    xlabel('X(1)'), ylabel('X(2)')    
-    view(201, 38), grid on, axis tight      
+    xlabel('X(1)')
+    ylabel('X(2)')    
+    view(201, 38)
+    grid on
+    axis tight      
     
-    shading interp, material metal, lighting gouraud, colormap('hot')
+    shading interp
+    material metal
+    lighting gouraud
+    colormap('hot')
+    
     light('style', 'local', 'position', [-3 0 5]);
     set(S, 'ambientstrength', 0.8); 
  
@@ -116,11 +152,15 @@ function minimize_demo
     Aeq = Aeq(Aeqinds); Aeq = Aeq(sortinds);
     y2 = y(Aeqinds); y2 = y2(sortinds);
     
-    figure, hold on    
+    figure('renderer', 'opengl');
+    hold on
+    
     l1 = line([x1(1:end-1)';x1(2:end)'],[y1(1:end-1)';y1(2:end)'],[Ax(1:end-1)';Ax(2:end)']);    
     l2 = line([x2(1:end-1)';x2(2:end)'],[y2(1:end-1).';y2(2:end)'],[Aeq(1:end-1).';Aeq(2:end)']);    
+    
     S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
     S(2) = surf(x, y, ZZ, 'linestyle', 'none');      
+    
     l3 = plot3(solution(1)+0.4, solution(2)+0.8, fval+0.5, 'gx',...
         'MarkerSize', 20,...
         'LineWidth', 5);
@@ -128,16 +168,26 @@ function minimize_demo
     set(l1, 'color', 'b', 'linewidth', 2);
     set(l2, 'color', 'k', 'linewidth', 2);         
     
-    view(150, 30), grid on, axis tight      
-    xlabel('X(1)', 'interpreter', 'LaTeX'); ylabel('X(2)', 'interpreter', 'LaTeX');
+    view(150, 30)
+    grid on
+    axis tight      
+    
+    xlabel('X(1)', 'interpreter', 'LaTeX');
+    ylabel('X(2)', 'interpreter', 'LaTeX');
+    
     k = legend([l1(1); l2(1); l3],'inequality $$A\mathbf{x} \leq -2$$', ...
         'equality $$A_{eq}\mathbf{x} = -2$$', 'Solution');
+    
     set(k, 'interpreter', 'LaTeX', 'location', 'NorthWest');   
     
-    shading interp, material metal, lighting phong, colormap('autumn')
+    shading interp
+    material metal
+    lighting phong
+    colormap('autumn')
+    
     light('style', 'local', 'position', [-3 0 5]);
-    set(S, 'ambientstrength', 0.8); 
-  
+    set(S, 'ambientstrength', 0.8);
+ 
     %% Non-linear constraints
     %
     % Also general nonlinear constraints can be used. A simple example:
@@ -172,20 +222,28 @@ function minimize_demo
     yY = y(isfinite(zZ));  yY = yY(inds);
     zZ = zZ(isfinite(zZ)); zZ = zZ(inds);
               
-    figure, hold on     
+    figure('renderer', 'opengl');
+    hold on
+    
     S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
-    S(2) = surf(x, y, ZZ, 'linestyle', 'none');    
+    S(2) = surf(x, y, ZZ, 'linestyle', 'none');
+    
     L = line([xX(1:end-1)';xX(2:end)'],[yY(1:end-1)';yY(2:end)'],[zZ(1:end-1)';zZ(2:end)']);        
     l3 = plot3(sol(1)+0.4, sol(2)+0.5, fval+1, 'gx', 'MarkerSize', 20, 'linewidth', 5);
     
     set(L, 'linewidth', 2, 'color', 'b');
-    view(150, 50), grid on, axis tight      
+    view(150, 50)
+    grid on
+    axis tight      
     
     k = legend([S(2); L(1); l3],'non-linear inequality $$c(x) < 0$$', ...
         'non-linear equality $$c_{eq}(x) = 0$$', 'Solution');
     set(k, 'interpreter', 'LaTeX', 'location', 'NorthWest');   
     
-    shading interp, material metal, lighting phong, colormap('autumn')
+    shading interp
+    material metal
+    lighting phong
+    colormap('autumn')
     light('style', 'local', 'position', [-3 0 5]);
     set(S, 'ambientstrength', 0.8); 
     
@@ -209,7 +267,9 @@ function minimize_demo
     
     sinenvsin = @(x) 3*sum( (sin(sqrt(x(:).'*x(:))).^2 - 0.5)./(1 + 0.001*x(:).'*x(:)).^2 + 0.5, 1);
     
-    figure, hold on
+    figure('renderer', 'opengl');
+    hold on
+    
     k = 0; range = -10:0.1:10;
     z = zeros(numel(range));    
     for ii = range
@@ -220,11 +280,16 @@ function minimize_demo
         end
     end  
     [y, x] = meshgrid(range, range);
+    
     S = surf(x, y, z, 'linestyle', 'none');
     
-    axis equal, view(-148,24)    
+    axis equal
+    view(-148,24)    
     
-    shading interp, material shiny, lighting phong , colormap('autumn')
+    shading interp
+    material shiny
+    lighting phong 
+    colormap('autumn')
     light('style', 'local', 'position', [-3 0 5]);
     set(S, 'ambientstrength', 0.6); 
     
@@ -258,24 +323,36 @@ function minimize_demo
     Aeq = Aeq(Aeqinds); Aeq = Aeq(sortinds);
     y2 = y(Aeqinds); y2 = y2(sortinds);
     
-    figure, hold on        
+    figure('renderer', 'opengl');
+    hold on
+    
     S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
     S(2) = surf(x, y, ZZ, 'linestyle', 'none');
+    
     l1 = line([x1(1:end-1)';x1(2:end)'],[y1(1:end-1)';y1(2:end)'],[Ax(1:end-1)';Ax(2:end)']);    
     l2 = line([x2(1:end-1)';x2(2:end)'],[y2(1:end-1).';y2(2:end)'],[Aeq(1:end-1).';Aeq(2:end)']);    
     l3 = plot3(solution(1)+0.5, solution(2)+2.8, fval+2, 'gx', 'MarkerSize', 20, 'linewidth', 5);
            
     xlabel('X(1)', 'interpreter', 'LaTeX'); 
     ylabel('X(2)', 'interpreter', 'LaTeX');
+    
     set(l1, 'color', 'r', 'linewidth', 2);
     set(l2, 'color', 'k', 'linewidth', 2);     
-    view(150, 30), grid on, axis tight          
+    
+    view(150, 30)
+    grid on
+    axis tight          
+    
     k = legend([l1(1); l2(1); l3],'inequality $$A\mathbf{x} \leq -2$$', ...
-        'equality $$A_{eq}\mathbf{x} = -2$$', 'Solution');
+        'equality $$A_{eq}\mathbf{x} = -2$$', 'Solution');    
     set(k, 'interpreter', 'LaTeX', 'location', 'NorthWest'); 
+    
     view(170,80);  
     
-    shading interp, material shiny, lighting phong, colormap('autumn')
+    shading interp
+    material shiny
+    lighting phong
+    colormap('autumn')
     light('style', 'local', 'position', [-3 0 5]);
     set(S, 'ambientstrength', 0.6); 
     
