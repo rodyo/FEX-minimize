@@ -187,8 +187,13 @@ function [sol, fval, exitflag, output, grad] = ...
     
     % Process user input
     narg = nargin;
-    error(nargchk(2, inf, narg,    'struct'));  %#ok<NCHKN>
-    error(nargchk(0,   6, nargout, 'struct'));  %#ok<NCHKM>
+    if verLessThan('MATLAB', '8.6')
+        error(nargchk(2, inf, narg,    'struct'));  %#ok<NCHKN>
+        error(nargchk(0,   6, nargout, 'struct'));  %#ok<NCHKM>
+    else
+        narginchk (2, inf);
+        nargoutchk(0, 6);
+    end
     
     if (narg < 10) || isempty(options), options = setoptimoptions; end
     if (narg <  9), nonlcon = ''; end
