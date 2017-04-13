@@ -1,14 +1,14 @@
 %% Constrained function minimization with |fminsearch| and |fminlbfgs|
 
 function minimize_demo
-      
+        
     %% Unconstrained optimization    
     %
     % first, define a test function:
     clc, rosen = @(x) ( (1-x(1))^2 + 105*(x(2)-x(1)^2)^2 ) /1e4;
 
     %%
-    % This is the classical Rosenbr\"uck function, which has a global minimum
+    % This is the classical Rosenbrock function, which has a global minimum
     % at $f(x) = f([1, 1]) = 0$. The function is relatively hard to minimize,
     % because that minimum is located in a long narrow ``valley'':
     k = 0; range = -5:0.05:5;
@@ -20,6 +20,8 @@ function minimize_demo
             z(k, m) = rosen([ii, jj]);            
         end
     end  
+    
+    figure, hold on, set(gcf, 'renderer', 'opengl');
     [y, x] = meshgrid(range, range);
     S = surf(x, y, z, 'linestyle', 'none'); view(-213, 38), axis tight    
         
@@ -31,7 +33,7 @@ function minimize_demo
     %%
     % Optimizing the fully unconstrained problem with |minimize| indeed 
     % finds the global minimum:
-    solution = minimize(rosen, [3 3])    
+    solution = minimize(rosen, [3 3])  %#ok<*NASGU,*NOPRT,*ASGLU>
     
     
     %% Optimization with bound constraints
@@ -44,7 +46,7 @@ function minimize_demo
     zz = z;   zz(x > 2 & y > 2) = inf;  
     ZZ = z;   ZZ(x < 2 & y < 2) = inf;
     
-    figure, hold on
+    figure, hold on, set(gcf, 'renderer', 'opengl');
     S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
     S(2) = surf(x, y, ZZ, 'linestyle', 'none');
     plot3(solution(1), solution(2), fval+0.5, 'gx', ...
@@ -65,7 +67,7 @@ function minimize_demo
     zz = z;   zz(x < 0.5 & y < 0.5) = inf;  
     ZZ = z;   ZZ(x > 0.5 & y > 0.5) = inf;
     
-    figure, hold on
+    figure, hold on, set(gcf, 'renderer', 'opengl');
     S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
     S(2) = surf(x, y, ZZ, 'linestyle', 'none');   
     plot3(solution(1), solution(2), fval+0.5, 'gx', ...
@@ -116,7 +118,7 @@ function minimize_demo
     Aeq = Aeq(Aeqinds); Aeq = Aeq(sortinds);
     y2 = y(Aeqinds); y2 = y2(sortinds);
     
-    figure, hold on    
+    figure, hold on, set(gcf, 'renderer', 'opengl');
     l1 = line([x1(1:end-1)';x1(2:end)'],[y1(1:end-1)';y1(2:end)'],[Ax(1:end-1)';Ax(2:end)']);    
     l2 = line([x2(1:end-1)';x2(2:end)'],[y2(1:end-1).';y2(2:end)'],[Aeq(1:end-1).';Aeq(2:end)']);    
     S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
@@ -157,7 +159,7 @@ function minimize_demo
         'MaxIter', 1e4);
     
     [sol, fval, exitflag, output] = minimize(rosen, [-3; 3], [],[], [],[],...
-        [],[], @nonlcon, options);
+        [],[], @nonlcon, options); 
     
     %%
     % Note that |nonlcon| is a subfunction, listed below. 
@@ -172,7 +174,7 @@ function minimize_demo
     yY = y(isfinite(zZ));  yY = yY(inds);
     zZ = zZ(isfinite(zZ)); zZ = zZ(inds);
               
-    figure, hold on     
+    figure, hold on, set(gcf, 'renderer', 'opengl');
     S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
     S(2) = surf(x, y, ZZ, 'linestyle', 'none');    
     L = line([xX(1:end-1)';xX(2:end)'],[yY(1:end-1)';yY(2:end)'],[zZ(1:end-1)';zZ(2:end)']);        
@@ -192,7 +194,7 @@ function minimize_demo
    
     %%
     % Note that the |output| structure contains a field |constrviolation|:
-    output
+    output 
     
     %%
     % The contents of which shows that all constraints have been satisfied:
@@ -209,7 +211,7 @@ function minimize_demo
     
     sinenvsin = @(x) 3*sum( (sin(sqrt(x(:).'*x(:))).^2 - 0.5)./(1 + 0.001*x(:).'*x(:)).^2 + 0.5, 1);
     
-    figure, hold on
+    figure, hold on, set(gcf, 'renderer', 'opengl');
     k = 0; range = -10:0.1:10;
     z = zeros(numel(range));    
     for ii = range
@@ -258,7 +260,7 @@ function minimize_demo
     Aeq = Aeq(Aeqinds); Aeq = Aeq(sortinds);
     y2 = y(Aeqinds); y2 = y2(sortinds);
     
-    figure, hold on        
+    figure, hold on, set(gcf, 'renderer', 'opengl');        
     S(1) = surf(x, y, zz, 'linestyle', 'none', 'FaceAlpha', 0.2);
     S(2) = surf(x, y, ZZ, 'linestyle', 'none');
     l1 = line([x1(1:end-1)';x1(2:end)'],[y1(1:end-1)';y1(2:end)'],[Ax(1:end-1)';Ax(2:end)']);    
@@ -303,7 +305,7 @@ function minimize_demo
     output.funcCount
     
     %%
-    % As can be seen, |fminlbfgs()| indeed uses less funtion evaluations to
+    % As can be seen, |fminlbfgs()| indeed uses fewer funtion evaluations to
     % come to a comparable answer. 
     %
     % The great advantage of this minimizer over |fminsearch()| is that

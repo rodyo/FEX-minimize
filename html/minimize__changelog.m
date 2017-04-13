@@ -1,5 +1,10 @@
 %% Changelog for MINIMIZE()
 
+%% *v9* (Apr 13, 2014)
+% * *CHANGED*: code formatting changes
+% * *CHANGED*: added citation info, updated contact info
+%
+
 %% *v8* (Jul 07, 2014)
 % * *FIXED*: loop range issue in setoptimoptions
 % * *FIXED*: simple linear constraint in one of examples was incorrectly 

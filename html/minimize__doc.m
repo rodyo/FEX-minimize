@@ -1,12 +1,15 @@
 %% Minimize  
 % Solve constrained optimization problems, globally or locally.
 %
+function minimize__doc
 %% Equation 
 %
 % Finds the minimum of a problem specified by
 %
 % <<equation.png>>
-function minimize__doc
+%
+%
+
 %% Syntax
 %
 %    sol = minimize(func, x0) 
@@ -104,7 +107,7 @@ function minimize__doc
 % *|sol|*, *|fval|*
 %
 % the solution vector and the corresponding function value, 
-respectively. 
+% respectively. 
 
 %%
 % *|exitflag|*
