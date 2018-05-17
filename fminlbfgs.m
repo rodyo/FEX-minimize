@@ -3,11 +3,11 @@
 %	amounts of unknown variables.
 %
 %   Optimization methods supported:
-%	- Quasi Newton Broydenï¿½Fletcherï¿½Goldfarbï¿½Shanno (BFGS)
+%	- Quasi Newton Broyden/Fletcher/Goldfarbï/Shanno (BFGS)
 %   - Limited memory BFGS (L-BFGS)
 %   - Steepest Gradient Descent optimization.
 %
-%   [X,FVAL,EXITFLAG,OUTPUT,GRAD] = FMINLBFGS(FUN,X0,OPTIONS)
+%   [X,FVAL,EXITFLAG,OUTPUT,GRAD,HESS] = FMINLBFGS(FUN,X0,OPTIONS)
 %
 %   Inputs,
 %		FUN: Function handle or string which is minimized, returning an
@@ -23,6 +23,7 @@
 %		EXITFLAG : Gives value, which explain why the minimizer stopt
 %		OUTPUT : Structure with all important ouput values and parameters
 %		GRAD : The gradient at this location
+%		HESS : The estimated Hessian at this location
 %
 %   Extended description of input/ouput variables
 %   OPTIONS,
@@ -120,82 +121,84 @@
 % CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 % ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 % POSSIBILITY OF SUCH DAMAGE.
-function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
+function [x, fval,...
+          exitflag, output, ...
+          grad, hess] = fminlbfgs(funfcn, x_init, optim)
     
-    % Read Optimalisation Parameters
+    % Read optimisation parameters
     defaultopt = struct(...
-        'Display','off',...
-        'HessUpdate','bfgs',...
-        'GoalsExactAchieve',1,...
-        'GradConstr',true,  ...
-        'TolX',1e-6,...
-        'TolFun',1e-6,...
-        'GradObj','off',...
-        'MaxIter',400,...
-        'MaxFunEvals',100*numel(x_init)-1, ...
-        'DiffMaxChange',1e-1,...
-        'DiffMinChange',1e-8,...
-        'OutputFcn',[], ...
-        'rho',0.0100,...
-        'sigma',0.900,...
-        'tau1',3,...
-        'tau2', 0.1,...
-        'tau3', 0.5,...
-        'StoreN',20);
+        'Display'          , 'off',...
+        'HessUpdate'       , 'bfgs',...
+        'GoalsExactAchieve', 1,...
+        'GradConstr'       , true,  ...
+        'TolX'             , 1e-6,...
+        'TolFun'           , 1e-6,...
+        'GradObj'          , 'off',...
+        'MaxIter'          , 400,...
+        'MaxFunEvals'      , 100*numel(x_init)-1, ...
+        'DiffMaxChange'    , 1e-1,...
+        'DiffMinChange'    , 1e-8,...
+        'OutputFcn'        , [], ...
+        'rho'              , 0.0100,...
+        'sigma'            , 0.900,...
+        'tau1'             , 3,...
+        'tau2'             , 0.1,...
+        'tau3'             , 0.5,...
+        'StoreN'           , 20);
     
     if nargin < 3
         optim = defaultopt;
     else
         f = fieldnames(defaultopt);
-        for ii = 1:length(f),
+        for ii = 1:length(f)
             if (~isfield(optim,f{ii})||(isempty(optim.(f{ii}))))
                 optim.(f{ii}) = defaultopt.(f{ii}); end
         end
     end
     
     % Initialize the data structure
-    data.fval=0;
-    data.gradient=0;
-    data.fOld=[];
-    data.xsizes=size(x_init);
+    data.fval       = 0;
+    data.gradient   = 0;
+    data.fOld       = [];
+    data.xsizes     = size(x_init);
     data.numberOfVariables = numel(x_init);
-    data.xInitial = x_init(:);
-    data.alpha=1;
-    data.xOld=data.xInitial;
-    data.iterations=0;
-    data.funcCount=0;
-    data.gradCount=0;
-    data.exitflag=[];
-    data.nStored=0;
-    data.timeTotal=tic;
-    data.timeExtern=0;
+    data.xInitial   = x_init(:);
+    data.alpha      = 1;
+    data.xOld       = data.xInitial;
+    data.iterations = 0;
+    data.funcCount  = 0;
+    data.gradCount  = 0;
+    data.exitflag   = [];
+    data.nStored    = 0;
+    data.timeTotal  = tic;
+    data.timeExtern = 0;
     
     % Switch to L-BFGS in case of more than 3000 unknown variables
     if(optim.HessUpdate(1)=='b')
-        if (data.numberOfVariables<3000),
-            optim.HessUpdate='bfgs';
+        if (data.numberOfVariables<3000)
+            optim.HessUpdate = 'bfgs';
         else
-            optim.HessUpdate='lbfgs';
+            optim.HessUpdate = 'lbfgs';
         end
     end
     
-    if (optim.HessUpdate(1)=='l')
-        succes=false;
+    if optim.HessUpdate(1)=='l'
+        succes = false;
         while (~succes)
             try
-                data.deltaX=zeros(data.numberOfVariables,optim.StoreN);
-                data.deltaG=zeros(data.numberOfVariables,optim.StoreN);
-                data.saveD=zeros(data.numberOfVariables,optim.StoreN);
-                succes=true;
+                data.deltaX = zeros(data.numberOfVariables,optim.StoreN);
+                data.deltaG = zeros(data.numberOfVariables,optim.StoreN);
+                data.saveD  = zeros(data.numberOfVariables,optim.StoreN);
+                succes      = true;
                 
             catch ME
-                warning('fminlbfgs:memory','Decreasing StoreN value because out of memory');
-                succes=false;
+                warning('fminlbfgs:memory',...
+                        'Decreasing StoreN value because out of memory');
+                succes = false;
                 data.deltaX=[]; data.deltaG=[]; data.saveD=[];
-                optim.StoreN=optim.StoreN-1;
-                if(optim.StoreN<1)
-                    rethrow(ME);
-                end
+                optim.StoreN = optim.StoreN-1;
+                if(optim.StoreN < 1)
+                    rethrow(ME); end
             end
         end
     end
@@ -214,9 +217,9 @@ function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
     data.dir = -data.gradient;
     data.fInitial = fval;
     data.fPrimeInitial= data.gradient'*data.dir(:);
-    data.fOld=data.fInitial;
-    data.xOld=data.xInitial;
-    data.gOld=data.gradient;
+    data.fOld = data.fInitial;
+    data.xOld = data.xInitial;
+    data.gOld = data.gradient;
     
     gNorm = norm(data.gradient,Inf);  % Norm of gradient
     data.initialStepLength = min(1/gNorm,5);
@@ -228,22 +231,25 @@ function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
     
     % Hessian intialization
     if(optim.HessUpdate(1)=='b')
-        data.Hessian=eye(data.numberOfVariables); end
+        data.Hessian = eye(data.numberOfVariables); end
     
     % Call output function
-    if(call_output_function(data,optim,'init')), exitflag=-1; end
+    if call_output_function(data,optim,'init')
+        exitflag=-1; end
     
-    % Start Minimizing
-    while(true)
+    % Start minimizing
+    while (true)
+        
         % Update number of itterations
-        data.iterations=data.iterations+1;
+        data.iterations = data.iterations+1;
         
         % Set current lineSearch parameters
         data.TolFunLnS = eps(max(1,abs(data.fInitial )));
-        data.fminimum = data.fInitial - 1e16*(1+abs(data.fInitial));
+        data.fminimum  = data.fInitial - 1e16*(1+abs(data.fInitial));
         
         % Make arrays to store linesearch results
-        data.storefx=[]; data.storepx=[]; data.storex=[]; data.storegx=[];
+        data.storefx = [];    data.storex  = []; 
+        data.storepx = [];    data.storegx = [];
         
         % If option display plot, than start new figure
         if(optim.Display(1)=='p')
@@ -257,7 +263,8 @@ function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
         end
         
         % Make linesearch plot
-        if (optim.Display(1)=='p');
+        if (optim.Display(1)=='p')
+            
             plot(data.storex,data.storefx,'r*');
             plot(data.storex,data.storefx,'b');
             
@@ -266,31 +273,33 @@ function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
             for i=1:length(alpha_test)
                 [data,falpha_test(i)]=gradient_function(data.xInitial(:)+alpha_test(i)*data.dir(:),funfcn, data, optim);
             end
+            
             plot(alpha_test,falpha_test,'g');
             plot(data.alpha,data.f_alpha,'go','MarkerSize',8);
+            
         end
-        
+data
         % Check if exitflag is set
-        if (~isempty(data.exitflag)),
-            exitflag=data.exitflag;
-            data.xInitial=data.xOld;
-            data.fInitial=data.fOld;
-            data.gradient=data.gOld;
-            break,
-        end;
+        if (~isempty(data.exitflag))
+            exitflag      = data.exitflag;
+            data.xInitial = data.xOld;
+            data.fInitial = data.fOld;
+            data.gradient = data.gOld;
+            break;
+        end
         
         % Update x with the alpha step
         data.xInitial = data.xInitial + data.alpha*data.dir;
         
         % Set the current error and gradient
-        data.fInitial =  data.f_alpha;
+        data.fInitial = data.f_alpha;
         data.gradient = data.grad;
         
         % Set initial steplength to 1
         data.initialStepLength = 1;
         
-        
-        gNorm = norm(data.gradient,Inf);  % Norm of gradient
+         % Norm of gradient
+        gNorm = norm(data.gradient,Inf); 
         
         % Set exit flags
         if (gNorm <optim.TolFun), exitflag=1; end
@@ -298,11 +307,12 @@ function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
         if (data.iterations>=optim.MaxIter), exitflag=0; end
         
         % Check if exitflag is set
-        if(~isempty(exitflag)), break, end;
+        if(~isempty(exitflag))
+            break; end
         
         % Update the inverse Hessian matrix
-        if(optim.HessUpdate(1)~='s')
-            % Do the Quasi-Neton Hessian update.
+        if optim.HessUpdate(1)~='s'
+            % Do the Quasi-Newton Hessian update.
             data = updateQuasiNewtonMatrix_LBFGS(data,optim);
         else
             data.dir = -data.gradient;
@@ -312,7 +322,8 @@ function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
         data.fPrimeInitial = data.gradient'*data.dir(:);
         
         % Call output function
-        if(call_output_function(data,optim,'iter')), exitflag=-1; end
+        if call_output_function(data,optim,'iter')
+            exitflag = -1; end
         
         % Show the current iteration
         if(strcmp(optim.Display(1),'i')||strcmp(optim.Display(1),'p'))
@@ -320,38 +331,43 @@ function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
         end
         
         % Keep the variables for next iteration
-        data.fOld=data.fInitial;
-        data.xOld=data.xInitial;
-        data.gOld=data.gradient;
+        data.fOld = data.fInitial;
+        data.xOld = data.xInitial;
+        data.gOld = data.gradient;
+        
     end
+    
     % Set output parameters
-    fval=data.fInitial;
-    grad=data.gradient;
-    x = data.xInitial;
-    
-    % Reshape x to original shape
-    x=reshape(x,data.xsizes);
-    
+    x    = reshape(data.xInitial,data.xsizes);
+    fval = data.fInitial; 
+    grad = data.gradient;
+    hess = data.Hessian;
+        
     % Call output function
-    if (call_output_function(data,optim,'done')), exitflag=-1; end
+    if call_output_function(data,optim,'done')
+        exitflag = -1; end
     
     % Make exist output structure
-    if (optim.HessUpdate(1)=='b'), output.algorithm='Broyden-Fletcher-Goldfarb-Shanno (BFGS)';
-    elseif (optim.HessUpdate(1)=='l'), output.algorithm='Limited memory BFGS (L-BFGS)';
-    else output.algorithm='Steepest Gradient Descent';
+    if (optim.HessUpdate(1)=='b')
+        output.algorithm = 'Broyden-Fletcher-Goldfarb-Shanno (BFGS)';
+    elseif (optim.HessUpdate(1)=='l')
+        output.algorithm = 'Limited memory BFGS (L-BFGS)';
+    else
+        output.algorithm = 'Steepest Gradient Descent';
     end
     
-    output.message=getexitmessage(exitflag);
+    output.message    = getexitmessage(exitflag);
     output.iterations = data.iterations;
-    output.funcCount = data.funcCount;
-    output.fval = data.fInitial;
-    output.stepsize = data.alpha;
+    output.funcCount  = data.funcCount;
+    output.fval       = data.fInitial;
+    output.stepsize   = data.alpha;    
+    output.gradient   = reshape(data.gradient, data.xsizes);    
+    output.timeTotal  = toc(data.timeTotal);
+    output.timeExtern = data.timeExtern;
+    oupput.timeIntern = output.timeTotal-output.timeExtern;
+    
     output.directionalderivative = data.fPrimeInitial;
-    output.gradient = reshape(data.gradient, data.xsizes);
-    output.searchdirection = data.dir;
-    output.timeTotal=toc(data.timeTotal);
-    output.timeExtern=data.timeExtern;
-    oupput.timeIntern=output.timeTotal-output.timeExtern;
+    output.searchdirection       = data.dir;
 
     % Display final results
     if strcmpi(optim.Display,'final')
@@ -366,7 +382,6 @@ function [x, fval, exitflag, output, grad] = fminlbfgs(funfcn, x_init, optim)
     end
     
 end
-
 
 
 function message = getexitmessage(exitflag)
@@ -414,6 +429,7 @@ function data = linesearch_simple(funfcn, data, optim)
     end
     
 end
+
 
 function data = bracketingPhase_simple(funfcn, data, optim)
     
@@ -569,6 +585,7 @@ function data=linesearch(funfcn, data, optim)
     end
 end
 
+
 function data = sectioningPhase(funfcn, data, optim)
     %
     % sectioningPhase finds an acceptable point alpha within a given bracket [a,b]
@@ -643,6 +660,7 @@ function data = sectioningPhase(funfcn, data, optim)
         if(data.funcCount >optim.MaxFunEvals), data.section_exitflag = 0; return, end
     end
 end
+
 
 function data = bracketingPhase(funfcn, data, optim)
     % bracketingPhase finds a bracket [a,b] that contains acceptable points; a bracket
@@ -748,6 +766,7 @@ function data = bracketingPhase(funfcn, data, optim)
     end
 end
 
+
 function [alpha,f_alpha]= pickAlphaWithinInterval(brcktEndpntA,brcktEndpntB,alpha1,alpha2,f1,fPrime1,f2,fPrime2,optim)
     % finds a global minimizer alpha within the bracket [brcktEndpntA,brcktEndpntB] of the cubic polynomial
     % that interpolates f() and f'() at alpha1 and alpha2. Here f(alpha1) = f1, f'(alpha1) = fPrime1,
@@ -794,6 +813,7 @@ function [alpha,f_alpha]= pickAlphaWithinInterval(brcktEndpntA,brcktEndpntB,alph
     
 end
 
+
 function [data,fval,grad]=gradient_function(x,funfcn, data, optim)
     % Call the error function for error (and gradient)
     if ( nargout <3 )
@@ -826,6 +846,7 @@ function [data,fval,grad]=gradient_function(x,funfcn, data, optim)
         grad=grad(:);
     end
 end
+
 
 function data = updateQuasiNewtonMatrix_LBFGS(data,optim)
     % updates the quasi-Newton matrix that approximates the inverse to the Hessian.

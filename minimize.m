@@ -46,8 +46,7 @@
 %       fmincon.)
 %
 %  options - (OPTIONAL) an options structure created manually or with
-%       setoptimoptions(). 
-%       
+%       setoptimoptions().    
 %
 % OUTPUT ARGUMENTS:
 %
@@ -73,6 +72,9 @@
 %
 % output - (See also the help on FMINSEARCH) A structure that contains
 %       additional details on the optimization. 
+%
+% gradient/hessian - (only for FMINLBFGS) the gradient and estimated 
+%                    hessian at x = sol.
 %
 % Notes:
 %
@@ -149,7 +151,6 @@
 % Licence    : BSD
 
 
-
 % FMINSEARCHBND, FMINSEARCHCON and part of the documentation 
 % for MINIMIZE witten by
 %
@@ -169,6 +170,9 @@ WISH: Include examples and demos in the documentation
 WISH: a properly working ConstraintsInObjectiveFunction
 
 
+FIXME: grad/hess not output by global optimizer
+FIXME: hess not ouput AT ALL
+
 FIXME: check how functions are evaluated; isn't it better to have objFcn()
        and conFcn() do more work? 
 FIXME: ignore given nonlcon() if ConstraintsInObjectiveFunction is true?
@@ -176,8 +180,14 @@ FIXME: fevals is miscounted; possibly fminlbfgs bug
 FIXME: TolX, TolFun, TolCon, DiffMinchange, DiffMaxChange should be transformed
 FIXME: 'AlwaysHonorConstraints' == 'bounds' does nothing
 %}
-function [sol, fval, exitflag, output, grad] = ...
-        minimize(funfcn, x0, A,b, Aeq,beq, lb,ub, nonlcon, options, varargin)
+function [sol, fval,...
+          exitflag, output,...
+          grad, hess] = minimize(funfcn, x0,...
+                                 A,b,...
+                                 Aeq,beq,...
+                                 lb,ub,...
+                                 nonlcon,...
+                                 options, varargin)
              
     % If you find this work useful, please consider a donation:
     % https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6G3S5UYM7HJ3N
@@ -380,7 +390,6 @@ function [sol, fval, exitflag, output, grad] = ...
                 [presol, fval, exitflag, output_a] = ...
                     fminlbfgs(@funfcnT, xin, options);
 
-
                 % Transform solution back to original (bounded) variables
                 sol = new_x;    sol(:) = X(presol); % with the same size as the original x0  
 
@@ -388,7 +397,8 @@ function [sol, fval, exitflag, output, grad] = ...
                 if grad_obj_from_objFcn
                     % Function value and gradient
                     [fval, grad] = objFcn(sol);
-
+                    if create_output
+                        output_a.funcCount = output_a.funcCount + 1; end
                 else
                     % Only function value
                     [fevals, grad] = computeJacobian(funfcn, sol, objFcn(sol));
@@ -399,8 +409,11 @@ function [sol, fval, exitflag, output, grad] = ...
         end % switch (algorithm)
         
     catch ME                
-        ME2 = MException('minimize:unhandled_error',...
-            'Unhandled problem encountered; please contact the author with this exact message, and your exact inputs.');                throw(addCause(ME2,ME));
+        ME2 = MException([mfilename ':unhandled_error'], [...
+                         'Unhandled problem encountered; please contact ',...
+                         'the author with this exact message, and your ',...
+                         'exact inputs.']);               
+        throw(addCause(ME2,ME));
     end
     
     % Copy appropriate fields to the output structure
@@ -410,7 +423,8 @@ function [sol, fval, exitflag, output, grad] = ...
         output.iterations = output_a.iterations;
         if ~have_nonlconFcn
             output.funcCount    = output_a.funcCount + 1;
-        else output.ObjfuncCount = output_a.funcCount + 1;
+        else
+            output.ObjfuncCount = output_a.funcCount + 1;
         end
     end
     
@@ -431,74 +445,84 @@ function [sol, fval, exitflag, output, grad] = ...
         
         % Dimensions & weird input
         if (numel(lb) ~= N0 && ~isscalar(lb)) || (numel(ub) ~= N0 && ~isscalar(ub))
-            error('minimize:lb_ub_incompatible_size',...
-                'Size of either [lb] or [ub] incompatible with size of [x0].')
+            error([mfilename ':lb_ub_incompatible_size'], [...
+                  'Size of either [lb] or [ub] incompatible with size ',...
+                  'of [x0].'])
         end
         if ~isempty(A) && isempty(b)
-            warning('minimize:Aeq_but_not_beq', ...
-                ['I received the matrix [A], but you omitted the corresponding vector [b].',...
-                '\nI''ll assume a zero-vector for [b]...'])
+            warning([mfilename 'minimize:Aeq_but_not_beq'], [...
+                    'I received the matrix [A], but you omitted the ',...
+                    'corresponding vector [b].\nI''ll assume a zero-vector ',...
+                    ' for [b]...']);
             b = zeros(size(A,1), size(x0,2));
         end
         if ~isempty(Aeq) && isempty(beq)
-            warning('minimize:Aeq_but_not_beq', ...
-                ['I received the matrix [Aeq], but you omitted the corresponding vector [beq].',...
-                '\nI''ll assume a zero-vector for [beq]...'])
+            warning([mfilename ':Aeq_but_not_beq'], [...
+                    'I received the matrix [Aeq], but you omitted the ',...
+                    'corresponding vector [beq].\nI''ll assume a ',...
+                    'zero-vector for [beq]...']);
             beq = zeros(size(Aeq,1), size(x0,2));
         end
         if isempty(Aeq) && ~isempty(beq)
-            warning('minimize:beq_but_not_Aeq', ...
-                ['I received the vector [beq], but you omitted the corresponding matrix [Aeq].',...
-                '\nI''ll ignore the given [beq]...'])
+            warning([mfilename ':beq_but_not_Aeq'],[...
+                    'I received the vector [beq], but you omitted the ',...
+                    'corresponding matrix [Aeq].\nI''ll ignore the given ',...
+                    '[beq]...']);
             beq = [];
         end
         if isempty(A) && ~isempty(b)
-            warning('minimize:b_but_not_A', ...
-                ['I received the vector [b], but you omitted the corresponding matrix [A].',...
-                '\nI''ll ignore the given [b]...'])
+            warning([mfilename ':b_but_not_A'], [...
+                    'I received the vector [b], but you omitted the ',...
+                    'corresponding matrix [A].\nI''ll ignore the given ',...
+                    '[b]...']);
             b = [];
         end
         if have_linineqconFcn && size(b,1)~=size(A,1)
-            error('minimize:b_incompatible_with_A',...
-                'The size of [b] is incompatible with that of [A].')
+            error([mfilename ':b_incompatible_with_A'],...
+                  'The size of [b] is incompatible with that of [A].');
         end
         if have_lineqconFcn && size(beq,1)~=size(Aeq,1)
-            error('minimize:b_incompatible_with_A',...
-                'The size of [beq] is incompatible with that of [Aeq].')
+            error([mfilename ':b_incompatible_with_A'],...
+                  'The size of [beq] is incompatible with that of [Aeq].');
         end
         if ~isvector(x0) && ~isempty(A) && (size(A,2) ~= size(x0,1))
-            error('minimize:A_incompatible_size',...
-                'Linear constraint matrix [A] has incompatible size for given [x0].')
+            error([mfilename ':A_incompatible_size'], [...
+                  'Linear constraint matrix [A] has incompatible size for ',... 
+                  'given [x0].']);
         end
         if ~isvector(x0) && ~isempty(Aeq) && (size(Aeq,2) ~= size(x0,1))
-            error('minimize:Aeq_incompatible_size',...
-                'Linear constraint matrix [Aeq] has incompatible size for given [x0].')
+            error([mfilename ':Aeq_incompatible_size'], [...
+                  'Linear constraint matrix [Aeq] has incompatible size ',...
+                  'for given [x0].']);
         end
         if ~isempty(b) && size(b,2)~=size(x0,2)
-            error('minimize:x0_vector_but_not_b',...
-                  'Given linear constraint vector [b] has incompatible size with given [x0].')
+            error([mfilename ':x0_vector_but_not_b'],[...
+                  'Given linear constraint vector [b] has incompatible ',...
+                  'size with given [x0].']);
         end
         if ~isempty(beq) && size(beq,2)~=size(x0,2)
-            error('minimize:x0_vector_but_not_beq',...
-                  'Given linear constraint vector [beq] has incompatible size with given [x0].')
+            error([mfilename ':x0_vector_but_not_beq'], [...
+                  'Given linear constraint vector [beq] has incompatible ',...
+                  'size with given [x0].']);
         end 
               
         % Functions are not function handles        
         if ~isa(funfcn, 'function_handle')
-            error('minimize:func_not_a_function',...
-                  'Objective function must be given as a function handle.')
+            error([mfilename ':func_not_a_function'],...
+                  'Objective function must be given as a function handle.');
         end
         if ~isempty(nonlcon) && ~ischar(nonlcon) && ~isa(nonlcon, 'function_handle')
-            error('minimize:nonlcon_not_a_function', ...
-                 'non-linear constraint function must be a function handle (advised) or string (discouraged).')
+            error([mfilename ':nonlcon_not_a_function'], [...
+                  'Non-linear constraint function must be a function ',...
+                  'handle (advised) or string (discouraged).']);
         end
         
         % Check if FMINLBFGS can be executed
-%FIXME: not required when you paste it as nested function below
-%         if ~isempty(algorithm) && strcmpi(algorithm,'fminlbfgs') && isempty(which('fminlbfgs'))
-%             error('minimize:fminlbfgs_not_present',...
-%                 'The function FMINLBFGS is not present in the current MATLAB path.');
-%         end
+        if ~isempty(algorithm) && strcmpi(algorithm,'fminlbfgs') && isempty(which('fminlbfgs'))
+            error([mfilename ':fminlbfgs_not_present'],[...
+                  'The function FMINLBFGS is not present in the current ',...
+                  'MATLAB path.']);
+        end
         
 
         % evaluate the non-linear constraint function on 
@@ -510,14 +534,16 @@ function [sol, fval, exitflag, output, grad] = ...
 
         % Check sizes of derivatives
         if ~isempty(grad_c) && (size(grad_c,2) ~= numel(x0)) && (size(grad_c,1) ~= numel(x0))
-            error('minimize:grad_c_incorrect_size',...
-                ['The matrix of gradients of the non-linear in-equality constraints\n',...
-                 'must have one of its dimensions equal to the number of elements in [x].']);            
+            error([mfilename ':grad_c_incorrect_size'], [...
+                  'The matrix of gradients of the non-linear in-equality ',...
+                  'constraints\nmust have one of its dimensions equal to ',...
+                  'the number of elements in [x].']);            
         end
         if ~isempty(grad_ceq) && (size(grad_ceq,2) ~= numel(x0)) && (size(grad_ceq,1) ~= numel(x0))
-             error('minimize:grad_ceq_incorrect_size',...
-                ['The matrix of gradients of the non-linear equality constraints\n',...
-                 'must have one of its dimension equal to  the number of elements in [x].']);
+             error([mfilename ':grad_ceq_incorrect_size'], [...
+                   'The matrix of gradients of the non-linear equality ',...
+                   'constraints\nmust have one of its dimension equal to ',...
+                   'the number of elements in [x].']);
         end        
         
         % Test the feasibility of the initial solution (when strict or
@@ -525,27 +551,31 @@ function [sol, fval, exitflag, output, grad] = ...
         if strcmpi(strictness, 'Bounds') || strcmpi(strictness, 'All')
             superstrict = strcmpi(strictness, 'All');           
             if ~isempty(A) && any(any(A*x0 > b))
-                error('minimize:x0_doesnt_satisfy_linear_ineq', ...
-                    ['Initial estimate does not satisfy linear inequality.', ...
-                    '\nPlease provide an initial estimate inside the feasible region.']);
+                error([mfilename ':x0_doesnt_satisfy_linear_ineq'],[...
+                      'Initial estimate does not satisfy linear inequality.', ...
+                      '\nPlease provide an initial estimate inside the ',...
+                      'feasible region.']);
             end
             if ~isempty(Aeq) && any(any(Aeq*x0 ~= beq))
-                error('minimize:x0_doesnt_satisfy_linear_eq', ...
-                    ['Initial estimate does not satisfy linear equality.', ...
-                    '\nPlease provide an initial estimate inside the feasible region.']);
+                error([mfilename ':x0_doesnt_satisfy_linear_eq'],[...
+                      'Initial estimate does not satisfy linear equality.', ...
+                      '\nPlease provide an initial estimate inside the ',...
+                      'feasible region.']);
             end
             if have_nonlconFcn
                 % check [c]
                 if ~isempty(c) && any(c(:) > ~superstrict*tolCon) 
-                    error('minimize:x0_doesnt_satisfy_nonlinear_ineq', ...
-                        ['Initial estimate does not satisfy nonlinear inequality.', ...
-                        '\nPlease provide an initial estimate inside the feasible region.']);
+                    error([mfilename ':x0_doesnt_satisfy_nonlinear_ineq'], [...
+                          'Initial estimate does not satisfy nonlinear ',...
+                          'inequality.\nPlease provide an initial estimate ',...
+                          'inside the feasible region.']);
                 end
                 % check [ceq]
                 if ~isempty(ceq) && any(abs(ceq(:)) >= ~superstrict*tolCon) 
-                    error('minimize:x0_doesnt_satisfy_nonlinear_eq', ...
-                        ['Initial estimate does not satisfy nonlinear equality.', ...
-                        '\nPlease provide an initial estimate inside the feasible region.']);
+                    error([mfilename ':x0_doesnt_satisfy_nonlinear_eq'], [...
+                          'Initial estimate does not satisfy nonlinear ',...
+                          'equality.\nPlease provide an initial estimate ',...
+                          'inside the feasible region.']);
                 end
             end
         end    
@@ -559,25 +589,27 @@ function [sol, fval, exitflag, output, grad] = ...
         % Impossible constraints
         inds = all(A==0,2);
         if any(inds) && any(any(b(inds,:)>0))
-            error('minimize:impossible_linear_inequality',...
-                'Impossible linear inequality specified.');
+            error([mfilename ':impossible_linear_inequality'],...
+                  'Impossible linear inequality specified.');
         end
         
         inds = all(Aeq==0,2);
         if any(inds) && any(any(beq(inds,:)~=0))
-            error('minimize:impossible_linear_equality',...
-                'Impossible linear equality specified.');
+            error([mfilename ':impossible_linear_equality'],...
+                  'Impossible linear equality specified.');
         end
         
         % Degenerate constraints
         if size(Aeq,1) > N0 && rank(Aeq) == N0
-            warning('minimize:linear_equality_overconstrains',...
-                'Linear equalities overconstrain problem; constrain violation is likely.');
+            warning([mfilename ':linear_equality_overconstrains'], [...
+                    'Linear equalities overconstrain problem; constrain ',...
+                    'violation is likely.']);
         end
         
         if size(Aeq,2) >= N0 && rank(Aeq) >= N0
-%             warning('minimize:linear_equality_overconstrains',...
-%                 'Linear equalities define solution - nothing to do.');
+            
+            warning([mfilename ':linear_equality_overconstrains'],...
+                    'Linear equalities define solution - nothing to do.');
             
             sol   = Aeq\beq;
             fval  = objFcn(sol);
@@ -589,7 +621,8 @@ function [sol, fval, exitflag, output, grad] = ...
                 output.message = 'Linear equalities define solution; nothing to do.';
                 if ~have_nonlconFcn
                      output.funcCount = 1;
-                else output.ObjfuncCount = 1;
+                else
+                    output.ObjfuncCount = 1;
                 end
             end
             
@@ -612,8 +645,8 @@ function [sol, fval, exitflag, output, grad] = ...
                 
         % If all variables are fixed, simply return
         if sum(lb(:)==ub(:)) == N0
-%             warning('minimize:bounds_overconstrain',...
-%                 'Lower and upper bound are equal - nothing to do.');
+            warning([mfilename ':bounds_overconstrain'],...
+                    'Lower and upper bound are equal - nothing to do.');
             
             sol   = reshape(lb,size(x0));
             fval  = objFcn(sol);
@@ -625,7 +658,8 @@ function [sol, fval, exitflag, output, grad] = ...
                 output.message = 'Lower and upper bound were set equal - nothing to do. ';
                 if ~have_nonlconFcn
                     output.funcCount = 1;
-                else output.ObjfuncCount = 1;
+                else
+                    output.ObjfuncCount = 1;
                 end
             end
             
@@ -741,7 +775,11 @@ function [sol, fval, exitflag, output, grad] = ...
 % constraint functions may take place
         
         % Initialize function value
-        if (size(x,2) == 1), P_fval = 0; else P_fval = None.'-1; end
+        if (size(x,2) == 1)
+            P_fval = 0;
+        else
+            P_fval = None.'-1;
+        end
                         
         % Initialize x_new array
         x_new = new_x;
@@ -769,8 +807,8 @@ function [sol, fval, exitflag, output, grad] = ...
                     
                 else
                     if grad_nonlcon_from_nonlconFcn
-                         arg_out = cell(1, nonlconFcn_in_objFcn+1);
-                    else arg_out = cell(1, nonlconFcn_in_objFcn+3);
+                          arg_out = cell(1, nonlconFcn_in_objFcn+1);
+                    else, arg_out = cell(1, nonlconFcn_in_objFcn+3);
                     end
                     
                     [arg_out{:}] = objFcn(x_new);                  
@@ -1112,7 +1150,9 @@ function [sol, fval, exitflag, output, grad] = ...
         narg    = numel(varargin);
         
         % initialize Jacobian
-        J = cellfun(@(y)zeros(numel(y), numel(x)), varargin, 'UniformOutput', false);
+        J = cellfun(@(y)zeros(numel(y), numel(x)), ...
+                    varargin, ...
+                    'UniformOutput', false);
         
         % And compute it using selected method
         switch lower(finDiffType)
@@ -1188,7 +1228,12 @@ function [sol, fval, exitflag, output, grad] = ...
         varargout = J;
         
     end
-        
+       
+    
+    % Compute Hessian with finite differences
+    
+    
+    
     % Simple wrapper function for output and plot functions; 
     % these need to be evaluated with the UNtransformed variables
     function stop = OutputFcn_wrapper(x, optimvalues, state)
@@ -1202,7 +1247,8 @@ function [sol, fval, exitflag, output, grad] = ...
             stop(ii) = feval(OutputFcn{ii}, x_new, optimvalues, state); end
         stop = any(stop);        
     end % OutputFcn_wrapper
-        
+    
+    
     function stop = PlotFcn_wrapper(x, optimvalues, state)
         % Transform x        
         x_new = new_x;  x_new(:) = X(x);
