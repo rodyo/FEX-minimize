@@ -65,7 +65,7 @@
 %
 %           2    Problem overconstrained by either [lb]/[ub] or
 %                [Aeq]/[beq] - nothing done
-%          -2    Problem is infeasible after the optimization (Some or 
+%          -2    Problem is infeasible after the optimization (some or 
 %                any of the constraints are violated at the final 
 %                solution).
 %          -3    INF or NAN encountered during the optimization. 
@@ -168,10 +168,7 @@ WISH: more checks for inconsistent constraints:
 WISH: Include examples and demos in the documentation
 WISH: a properly working ConstraintsInObjectiveFunction
 
-
-FIXME: grad/hess not output by global optimizer
 FIXME: hess not ouput AT ALL
-
 FIXME: check how functions are evaluated; isn't it better to have objFcn()
        and conFcn() do more work? 
 FIXME: ignore given nonlcon() if ConstraintsInObjectiveFunction is true?
@@ -189,7 +186,7 @@ function [sol, fval,...
                                  options, varargin)
              
     % If you find this work useful, please consider a donation:
-    % https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=6G3S5UYM7HJ3N
+    % https://www.paypal.me/RodyO/3.5
         
     %% Initialization
     
@@ -364,7 +361,7 @@ function [sol, fval,...
 
             % Steepest descent or Quasi-Newton (limited-memory) BFGS 
             % (both using gradient) FMINLBFGS(), by Dirk-Jan Kroon 
-            case 'fminlbfgs'                  
+            case 'fminlbfgs'
 
                 % DEBUG: check gradients
                 %{
@@ -386,12 +383,13 @@ function [sol, fval,...
                  [F,G] = funfcnT(xin)
                 %}
 
-                [presol, fval, exitflag, output_a] = ...
+                [presol, fval, exitflag, output_a, ~, hess_a] = ...
                     fminlbfgs(@funfcnT, xin, options);
 
                 % Transform solution back to original (bounded) variables
-                sol = new_x;    sol(:) = X(presol); % with the same size as the original x0  
-
+                sol    = new_x;   
+                sol(:) = X(presol); % with the same size as the original x0  
+                
                 % Evaluate function some more to get unconstrained values            
                 if grad_obj_from_objFcn
                     % Function value and gradient
@@ -430,7 +428,19 @@ function [sol, fval,...
     % Append constraint violations to the output structure, and change the
     % exitflag accordingly
     [output, exitflag] = finalize(sol, output, exitflag);
-       
+    
+    % Hessian output
+    if strcmpi(algorithm, 'fminlbfgs')    
+        
+        % No violation - Hessian estimate equals last-evaluated
+        if exitflag ~= -2
+            hess = hess_a;
+            
+        % Constraints are violated - no unconstrained estimate is available
+        else
+            hess = NaN(size(hess_a));
+        end
+    end
     
     %% NESTED FUNCTIONS (THE ACTUAL WORK)
     
@@ -1304,7 +1314,7 @@ function [sol, fval,...
             violation(~violated) = 0; clear Ax
             output.constrviolation.lin_ineq{1} = violated;
             output.constrviolation.lin_ineq{2} = violation;
-            is_violated = is_violated || any(violated(:));
+            is_violated   = is_violated || any(violated(:));
             max_violation = max(max_violation, max(violation));
             clear violation violated
         end
@@ -1315,7 +1325,7 @@ function [sol, fval,...
             violation(~violated) = 0; clear Aeqx
             output.constrviolation.lin_eq{1} = violated;
             output.constrviolation.lin_eq{2} = violation;
-            is_violated = is_violated || any(abs(violated(:)));
+            is_violated   = is_violated || any(abs(violated(:)));
             max_violation = max(max_violation, max(abs(violation)));
             clear violation violated
         end
