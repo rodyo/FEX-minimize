@@ -147,7 +147,7 @@
 % E-mail     : oldenhuis@gmail.com         (personal)
 %              r-oldenhuis@ispace-inc.com  (professional)
 % Affiliation: ispace inc., Japan
-% Licence    : BSD
+% License    : BSD 2.0; see license.txt
 
 
 % FMINSEARCHBND, FMINSEARCHCON and part of the documentation 
