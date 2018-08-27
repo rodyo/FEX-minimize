@@ -226,7 +226,11 @@ function [x, fval,...
     
     % Show the current iteration
     if(strcmp(optim.Display,'iter'))
-        s = sprintf('     %5.0f       %5.0f       %5.0f       %13.6g    ',data.iterations,data.funcCount,data.gradCount,data.fInitial); disp(s);
+        fprintf('     %5.0f       %5.0f       %5.0f       %13.6g    ',...
+                data.iterations,...
+                data.funcCount,...
+                data.gradCount,...
+                data.fInitial);
     end
     
     % Hessian intialization
@@ -278,7 +282,7 @@ function [x, fval,...
             plot(data.alpha,data.f_alpha,'go','MarkerSize',8);
             
         end
-data
+
         % Check if exitflag is set
         if (~isempty(data.exitflag))
             exitflag      = data.exitflag;
@@ -327,7 +331,12 @@ data
         
         % Show the current iteration
         if(strcmp(optim.Display(1),'i')||strcmp(optim.Display(1),'p'))
-            s=sprintf('     %5.0f       %5.0f       %5.0f       %13.6g   %13.6g',data.iterations,data.funcCount,data.gradCount,data.fInitial,data.alpha); disp(s);
+            fprintf('     %5.0f       %5.0f       %5.0f       %13.6g   %13.6g',...
+                    data.iterations,...
+                    data.funcCount,...
+                    data.gradCount,...
+                    data.fInitial,...
+                    data.alpha);
         end
         
         % Keep the variables for next iteration
@@ -383,7 +392,6 @@ data
     
 end
 
-
 function message = getexitmessage(exitflag)
     switch (exitflag)
         case +1, message = 'Change in the objective function value was less than the specified tolerance TolFun.';
@@ -397,8 +405,8 @@ function message = getexitmessage(exitflag)
     end
 end
 
-
 function stopt = call_output_function(data, optim, where)
+    
     stopt = false;
     if (~isempty(optim.OutputFcn))
         output.iterations = data.iterations;
@@ -410,8 +418,8 @@ function stopt = call_output_function(data, optim, where)
         output.searchdirection = data.dir;
         stopt = feval(optim.OutputFcn, reshape(data.xInitial,data.xsizes), output, where);
     end
+    
 end
-
 
 function data = linesearch_simple(funfcn, data, optim)
     
@@ -430,11 +438,10 @@ function data = linesearch_simple(funfcn, data, optim)
     
 end
 
-
 function data = bracketingPhase_simple(funfcn, data, optim)
     
     % Number of itterations
-    itw=0;
+    itw = 0;
     
     % Point with smaller value, initial
     data.beta=0;
@@ -448,7 +455,8 @@ function data = bracketingPhase_simple(funfcn, data, optim)
     hill = false;
     
     % Search for brackets
-    while(true)
+    while (true)
+        
         % Calculate the error registration gradient
         if(optim.GradConstr)
             [data,f_alpha]=gradient_function(data.xInitial(:)+alpha*data.dir(:),funfcn, data, optim);
@@ -466,7 +474,7 @@ function data = bracketingPhase_simple(funfcn, data, optim)
         data.storegx=[data.storegx grad(:)];
         
         % Update step value
-        if(data.f_beta<f_alpha),
+        if(data.f_beta<f_alpha)
             % Go to smaller stepsize
             alpha=alpha*optim.tau3;
             
@@ -475,59 +483,72 @@ function data = bracketingPhase_simple(funfcn, data, optim)
         else
             % Save current minium point
             data.beta=alpha; data.f_beta=f_alpha; data.fPrime_beta=fPrime_alpha; data.grad=grad;
-            if(~hill)
-                alpha=alpha*optim.tau1;
-            end
+            if (~hill)
+                alpha=alpha*optim.tau1; end
         end
         
         % Update number of loop iterations
         itw=itw+1;
         
-        if(itw>(log(optim.TolFun)/log(optim.tau3))),
+        if (itw>(log(optim.TolFun)/log(optim.tau3)))
             % No new optium found, linesearch failed.
-            data.bracket_exitflag=-2; break;
+            data.bracket_exitflag=-2; 
+            break;
         end
         
-        if(data.beta>0&&hill)
+        if (data.beta>0&&hill)
             % Get the brackets around minimum point
             % Pick bracket A from stored trials
-            [t,i]=sort(data.storex,'ascend');
-            storefx=data.storefx(i);storepx=data.storepx(i); storex=data.storex(i);
-            [t,i]=find(storex>data.beta,1);
-            if(isempty(i)), [t,i]=find(storex==data.beta,1); end
-            alpha=storex(i); f_alpha=storefx(i); fPrime_alpha=storepx(i);
+            [~,i] = sort(data.storex,'ascend');
+            storefx = data.storefx(i);storepx=data.storepx(i); storex=data.storex(i);
+            [~,i] = find(storex>data.beta,1);
+            if(isempty(i))
+                [~,i]=find(storex==data.beta,1); end
+            
+            alpha = storex(i); f_alpha=storefx(i); fPrime_alpha=storepx(i);
             
             % Pick bracket B from stored trials
-            [t,i]=sort(data.storex,'descend');
+            [~,i]=sort(data.storex,'descend');
             storefx=data.storefx(i);storepx=data.storepx(i); storex=data.storex(i);
-            [t,i]=find(storex<data.beta,1);
-            if(isempty(i)), [t,i]=find(storex==data.beta,1); end
+            [~,i]=find(storex<data.beta,1);
+            if(isempty(i)), [~,i]=find(storex==data.beta,1); end
             beta=storex(i); f_beta=storefx(i); fPrime_beta=storepx(i);
             
             % Calculate derivatives if not already calculated
             if(optim.GradConstr)
-                gstep=data.initialStepLength/1e6;
-                if(gstep>optim.DiffMaxChange), gstep=optim.DiffMaxChange; end
-                if(gstep<optim.DiffMinChange), gstep=optim.DiffMinChange; end
-                [data,f_alpha2]=gradient_function(data.xInitial(:)+(alpha+gstep)*data.dir(:),funfcn, data, optim);
-                [data,f_beta2]=gradient_function(data.xInitial(:)+(beta+gstep)*data.dir(:),funfcn, data, optim);
+                
+                gstep = data.initialStepLength/1e6;
+                
+                if(gstep>optim.DiffMaxChange)
+                    gstep=optim.DiffMaxChange; end
+                if(gstep<optim.DiffMinChange)
+                    gstep=optim.DiffMinChange; end
+                
+                [data,f_alpha2] = gradient_function(data.xInitial(:)+(alpha+gstep)*data.dir(:),funfcn, data, optim);
+                [data,f_beta2]  = gradient_function(data.xInitial(:)+(beta+gstep)*data.dir(:),funfcn, data, optim);
                 fPrime_alpha=(f_alpha2-f_alpha)/gstep;
                 fPrime_beta=(f_beta2-f_beta)/gstep;
             end
             
             % Set the brackets A and B
-            data.a=alpha; data.f_a=f_alpha; data.fPrime_a=fPrime_alpha;
-            data.b=beta; data.f_b=f_beta; data.fPrime_b=fPrime_beta;
+            data.a = alpha; data.f_a=f_alpha; data.fPrime_a=fPrime_alpha;
+            data.b = beta; data.f_b=f_beta; data.fPrime_b=fPrime_beta;
             
             % Finished bracketing phase
-            data.bracket_exitflag  = 2; return
+            data.bracket_exitflag  = 2;
+            return
+            
         end
         
         % Reached max function evaluations
-        if(data.funcCount>=optim.MaxFunEvals), data.bracket_exitflag=0; return; end
+        if(data.funcCount>=optim.MaxFunEvals)
+            data.bracket_exitflag=0; 
+            return; 
+        end
+        
     end
+    
 end
-
 
 function data = sectioningPhase_simple(funfcn, data, optim)
     % Get the brackets
@@ -538,13 +559,13 @@ function data = sectioningPhase_simple(funfcn, data, optim)
     if(isfield(data,'beta')&&(data.f_beta<f_alpha_estimated)), alpha=data.beta; end
     
     
-    [t,i]=find(data.storex==alpha,1);
+    [~,i]=find(data.storex==alpha,1);
     if((~isempty(i))&&(~isnan(data.storegx(i))))
         f_alpha=data.storefx(i); grad=data.storegx(:,i);
     else
         % Calculate the error and gradient for the next minimizer itteration
         [data,f_alpha, grad]=gradient_function(data.xInitial(:)+alpha*data.dir(:),funfcn, data,optim);
-        if(isfield(data,'beta')&&(data.f_beta<f_alpha)),
+        if(isfield(data,'beta')&&(data.f_beta<f_alpha))
             alpha=data.beta;
             if((~isempty(i))&&(~isnan(data.storegx(i))))
                 f_alpha=data.storefx(i); grad=data.storegx(:,i);
@@ -568,8 +589,7 @@ function data = sectioningPhase_simple(funfcn, data, optim)
     
 end
 
-
-function data=linesearch(funfcn, data, optim)
+function data = linesearch(funfcn, data, optim)
     
     % Find a bracket of acceptable points
     data = bracketingPhase(funfcn, data,optim);
@@ -583,8 +603,8 @@ function data=linesearch(funfcn, data, optim)
         % Already acceptable point found or MaxFunEvals reached
         data.exitflag = data.bracket_exitflag;
     end
+    
 end
-
 
 function data = sectioningPhase(funfcn, data, optim)
     %
@@ -603,16 +623,23 @@ function data = sectioningPhase(funfcn, data, optim)
         alpha = pickAlphaWithinInterval(brcktEndpntA,brcktEndpntB,data.a,data.b,data.f_a,data.fPrime_a,data.f_b,data.fPrime_b,optim);
         
         % No acceptable point could be found
-        if (abs( (alpha - data.a)*data.fPrime_a ) <= data.TolFunLnS), data.section_exitflag = -2; return; end
+        if (abs( (alpha - data.a)*data.fPrime_a ) <= data.TolFunLnS)
+            data.section_exitflag = -2; 
+            return;
+        end
         
         % Calculate value (and gradient if no extra time cost) of current alpha
         if(~optim.GradConstr)
-            [data,f_alpha, grad]=gradient_function(data.xInitial(:)+alpha*data.dir(:),funfcn, data, optim);
+            [data,f_alpha, grad] = gradient_function(data.xInitial(:)+alpha*data.dir(:),funfcn, data, optim);
             fPrime_alpha = grad'*data.dir(:);
         else
-            gstep=data.initialStepLength/1e6;
-            if(gstep>optim.DiffMaxChange), gstep=optim.DiffMaxChange; end
-            if(gstep<optim.DiffMinChange), gstep=optim.DiffMinChange; end
+            gstep = data.initialStepLength/1e6;
+            
+            if(gstep>optim.DiffMaxChange)
+                gstep=optim.DiffMaxChange; end
+            if(gstep<optim.DiffMinChange)
+                gstep=optim.DiffMinChange; end
+            
             [data,f_alpha]=gradient_function(data.xInitial(:)+alpha*data.dir(:),funfcn, data,optim);
             [data,f_alpha2]=gradient_function(data.xInitial(:)+(alpha+gstep)*data.dir(:),funfcn, data, optim);
             fPrime_alpha=(f_alpha2-f_alpha)/gstep;
@@ -632,7 +659,7 @@ function data = sectioningPhase(funfcn, data, optim)
             data.b = alpha; data.f_b = f_alpha; data.fPrime_b = fPrime_alpha;
         else
             % Wolfe conditions, if true then acceptable point found
-            if (abs(fPrime_alpha) <= -optim.sigma*data.fPrimeInitial),
+            if (abs(fPrime_alpha) <= -optim.sigma*data.fPrimeInitial)
                 if(optim.GradConstr)
                     % Gradient was not yet calculated because of time costs
                     [data,f_alpha, grad]=gradient_function(data.xInitial(:)+alpha*data.dir(:),funfcn, data, optim);
@@ -641,7 +668,8 @@ function data = sectioningPhase(funfcn, data, optim)
                 % Store the found alpha values
                 data.alpha=alpha; data.fPrime_alpha= fPrime_alpha; data.f_alpha= f_alpha;
                 data.grad=grad;
-                data.section_exitflag = []; return,
+                data.section_exitflag = []; 
+                return;
             end
             
             % Update bracket A
@@ -654,13 +682,14 @@ function data = sectioningPhase(funfcn, data, optim)
         end
         
         % No acceptable point could be found
-        if (abs(data.b-data.a) < eps), data.section_exitflag = -2; return, end
+        if (abs(data.b-data.a) < eps), data.section_exitflag = -2; 
+            return, end
         
         % maxFunEvals reached
-        if(data.funcCount >optim.MaxFunEvals), data.section_exitflag = 0; return, end
+        if(data.funcCount >optim.MaxFunEvals), data.section_exitflag = 0; 
+            return, end
     end
 end
-
 
 function data = bracketingPhase(funfcn, data, optim)
     % bracketingPhase finds a bracket [a,b] that contains acceptable points; a bracket
@@ -725,7 +754,7 @@ function data = bracketingPhase(funfcn, data, optim)
         end
         
         % Acceptable steplength found
-        if (abs(fPrime_alpha) <= -optim.sigma*data.fPrimeInitial),
+        if (abs(fPrime_alpha) <= -optim.sigma*data.fPrimeInitial)
             if(optim.GradConstr)
                 % Gradient was not yet calculated because of time costs
                 [data,f_alpha, grad]=gradient_function(data.xInitial(:)+alpha*data.dir(:),funfcn, data, optim);
@@ -766,11 +795,15 @@ function data = bracketingPhase(funfcn, data, optim)
     end
 end
 
-
-function [alpha,f_alpha]= pickAlphaWithinInterval(brcktEndpntA,brcktEndpntB,alpha1,alpha2,f1,fPrime1,f2,fPrime2,optim)
-    % finds a global minimizer alpha within the bracket [brcktEndpntA,brcktEndpntB] of the cubic polynomial
-    % that interpolates f() and f'() at alpha1 and alpha2. Here f(alpha1) = f1, f'(alpha1) = fPrime1,
-    % f(alpha2) = f2, f'(alpha2) = fPrime2.
+function [alpha,f_alpha] = pickAlphaWithinInterval(brcktEndpntA, brcktEndpntB,...
+                                                   alpha1, alpha2,...
+                                                   f1,fPrime1,...
+                                                   f2,fPrime2,...
+                                                   optim)                                               
+    % finds a global minimizer alpha within the bracket 
+    % [brcktEndpntA,brcktEndpntB] of the cubic polynomial that interpolates 
+    % f() and f'() at alpha1 and alpha2. Here f(alpha1) = f1, 
+    % f'(alpha1) = fPrime1, f(alpha2) = f2, f'(alpha2) = fPrime2.
     
     % determines the coefficients of the cubic polynomial with c(alpha1) = f1,
     % c'(alpha1) = fPrime1, c(alpha2) = f2, c'(alpha2) = fPrime2.
@@ -782,7 +815,11 @@ function [alpha,f_alpha]= pickAlphaWithinInterval(brcktEndpntA,brcktEndpntB,alph
     upperBound = (brcktEndpntB - alpha1)/(alpha2 - alpha1);
     
     % Swap if lowerbound is higher than the upperbound
-    if (lowerBound  > upperBound), t=upperBound; upperBound=lowerBound; lowerBound=t; end
+    if (lowerBound  > upperBound)
+        t=upperBound; 
+        upperBound = lowerBound;
+        lowerBound = t; 
+    end
     
     % Find minima and maxima from the roots of the derivative of the polynomial.
     sPoints = roots([3*coeff(1) 2*coeff(2) coeff(3)]);
@@ -790,7 +827,8 @@ function [alpha,f_alpha]= pickAlphaWithinInterval(brcktEndpntA,brcktEndpntB,alph
     % Remove imaginaire and points outside range
     
     sPoints(imag(sPoints)~=0)=[];
-    sPoints(sPoints<lowerBound)=[]; sPoints(sPoints>upperBound)=[];
+    sPoints(sPoints<lowerBound)=[]; 
+    sPoints(sPoints>upperBound)=[];
     
     % Make vector with all possible solutions
     sPoints=[lowerBound sPoints(:)' upperBound];
@@ -802,7 +840,7 @@ function [alpha,f_alpha]= pickAlphaWithinInterval(brcktEndpntA,brcktEndpntB,alph
     alpha = alpha1 + z*(alpha2 - alpha1);
     
     % Show polynomial search
-    if(optim.Display(1)=='p');
+    if(optim.Display(1)=='p')
         vPoints=polyval(coeff,sPoints);
         plot(sPoints*(alpha2 - alpha1)+alpha1,vPoints,'co');
         plot([sPoints(1) sPoints(end)]*(alpha2 - alpha1)+alpha1,[vPoints(1) vPoints(end)],'c*');
@@ -835,7 +873,7 @@ function [data,fval,grad]=gradient_function(x,funfcn, data, optim)
             gstep=data.initialStepLength/1e6;
             if(gstep>optim.DiffMaxChange), gstep=optim.DiffMaxChange; end
             if(gstep<optim.DiffMinChange), gstep=optim.DiffMinChange; end
-            for i=1:length(x),
+            for i=1:length(x)
                 x_temp=x; x_temp(i)=x_temp(i)+gstep;
                 timem=tic;
                 [fval_g]=feval(funfcn,reshape(x_temp,data.xsizes)); data.funcCount=data.funcCount+1;
@@ -854,27 +892,32 @@ function data = updateQuasiNewtonMatrix_LBFGS(data,optim)
     % constructed or stored.
     % Calculate position, and gradient diference between the
     % itterations
-    deltaX=data.alpha* data.dir;
-    deltaG=data.gradient-data.gOld;
+    
+    deltaX = data.alpha* data.dir;
+    deltaG = data.gradient-data.gOld;
     
     if ((deltaX'*deltaG) >= sqrt(eps)*max( eps,norm(deltaX)*norm(deltaG) ))
         
         if(optim.HessUpdate(1)=='b')
             % Default BFGS as described by Nocedal
-            p_k = 1 / (deltaG'*deltaX);
-            Vk = eye(data.numberOfVariables) - p_k*deltaG*deltaX';
+            p_k = 1 / (deltaG.'*deltaX);
+            Vk = eye(data.numberOfVariables) - p_k*deltaG*deltaX.';
             % Set Hessian
-            data.Hessian = Vk'*data.Hessian *Vk + p_k * deltaX*deltaX';
+            data.Hessian = Vk'*data.Hessian *Vk + p_k * (deltaX*deltaX.');
             % Set new Direction
             data.dir = -data.Hessian*data.gradient;
         else
             % L-BFGS with scaling as described by Nocedal
             
             % Update a list with the history of deltaX and deltaG
-            data.deltaX(:,2:optim.StoreN)=data.deltaX(:,1:optim.StoreN-1); data.deltaX(:,1)=deltaX;
-            data.deltaG(:,2:optim.StoreN)=data.deltaG(:,1:optim.StoreN-1); data.deltaG(:,1)=deltaG;
+            data.deltaX(:,2:optim.StoreN)=data.deltaX(:,1:optim.StoreN-1); 
+            data.deltaX(:,1) = deltaX;
             
-            data.nStored=data.nStored+1; if(data.nStored>optim.StoreN), data.nStored=optim.StoreN; end
+            data.deltaG(:,2:optim.StoreN)=data.deltaG(:,1:optim.StoreN-1); 
+            data.deltaG(:,1) = deltaG;
+            
+            data.nStored=data.nStored+1; 
+            if(data.nStored>optim.StoreN), data.nStored=optim.StoreN; end
             
             % Initialize variables
             a=zeros(1,data.nStored);
@@ -891,7 +934,7 @@ function data = updateQuasiNewtonMatrix_LBFGS(data,optim)
             
             % Make r = - Hessian * gradient
             r = p_k * q;
-            for i=data.nStored:-1:1,
+            for i=data.nStored:-1:1
                 b = p(i) * data.deltaG(:,i)' * r;
                 r = r + data.deltaX(:,i)*(a(i)-b);
             end
